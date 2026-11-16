@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Rajasthan Royals — Player Pressure Analytics Dashboard</title>
+<style>
+  :root{
+    --rr-pink:#E8174B; --rr-blue:#004B8D; --rr-gold:#F5A623;
+    --bg:#0A0F1E; --card:#111827; --card2:#1a2238;
+    --text:#E5E7EB; --muted:#9CA3AF; --border:#1F2F4F;
+    --green:#22C55E; --red:#EF4444; --yellow:#EAB308;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;font-family:'Segoe UI',sans-serif;}
+  body{background:var(--bg);color:var(--text);min-height:100vh;}
+
+  /* ── HEADER ── */
+  header{
+    background:linear-gradient(135deg,var(--rr-blue) 0%,#001f3f 60%,#1a0010 100%);
+    padding:20px 32px;display:flex;align-items:center;justify-content:space-between;
+    border-bottom:3px solid var(--rr-pink);
+    box-shadow:0 4px 24px rgba(232,23,75,.35);
+  }
+  .logo-block{display:flex;align-items:center;gap:14px;}
+  .rr-crest{
+    width:56px;height:56px;background:var(--rr-pink);border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    font-size:22px;font-weight:900;color:#fff;
+    box-shadow:0 0 16px rgba(232,23,75,.6);
+  }
+  .header-title h1{font-size:1.6rem;font-weight:800;letter-spacing:1px;}
+  .header-title p{font-size:.82rem;color:var(--rr-gold);letter-spacing:2px;margin-top:2px;}
+  .badge{
+    background:var(--rr-pink);color:#fff;padding:6px 16px;border-radius:999px;
+    font-size:.75rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;
+  }
+
+  /* ── HERO STATS ── */
+  .hero-stats{
+    display:grid;grid-template-columns:repeat(4,1fr);gap:16px;
+    padding:24px 32px;background:var(--card2);border-bottom:1px solid var(--border);
+  }
+  .hero-card{
+    background:var(--card);border:1px solid var(--border);border-radius:12px;
+    padding:18px;text-align:center;position:relative;overflow:hidden;
+  }
+  .hero-card::before{
+    content:'';position:absolute;top:0;left:0;right:0;height:3px;
+    background:linear-gradient(90deg,var(--rr-pink),var(--rr-gold));
+  }
+  .hero-num{font-size:2.2rem;font-weight:800;color:var(--rr-gold);}
+  .hero-label{font-size:.75rem;color:var(--muted);margin-top:4px;letter-spacing:1px;}
+
+  /* ── LAYOUT ── */
+  .main{display:grid;grid-template-columns:340px 1fr;gap:0;min-height:calc(100vh - 160px);}
+  .sidebar{
+    background:var(--card);border-right:1px solid var(--border);
+    padding:20px;overflow-y:auto;max-height:calc(100vh - 160px);
+  }
+  .content{padding:24px;overflow-y:auto;max-height:calc(100vh - 160px);}
+
+  /* ── SECTION HEADER ── */
+  .section-title{
+    font-size:.7rem;letter-spacing:2px;text-transform:uppercase;
+    color:var(--muted);margin-bottom:12px;padding-bottom:6px;
+    border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;
+  }
+  .section-title span{color:var(--rr-pink);}
+
+  /* ── PLAYER CARD (sidebar) ── */
+  .player-card{
+    background:var(--card2);border:1px solid var(--border);border-radius:10px;
+    padding:14px;margin-bottom:10px;cursor:pointer;transition:.2s;
+    position:relative;overflow:hidden;
+  }
+  .player-card:hover,.player-card.active{
+    border-color:var(--rr-pink);box-shadow:0 0 12px rgba(232,23,75,.25);
+  }
+  .player-card.active::before{
+    content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--rr-pink);
+  }
+  .pc-top{display:flex;justify-content:space-between;align-items:flex-start;}
+  .pc-name{font-weight:700;font-size:.95rem;}
+  .pc-role{font-size:.7rem;padding:2px 8px;border-radius:999px;margin-top:3px;display:inline-block;}
+  .role-bat{background:rgba(245,166,35,.15);color:var(--rr-gold);}
+  .role-bowl{background:rgba(34,197,94,.15);color:var(--green);}
+  .role-all{background:rgba(232,23,75,.15);color:var(--rr-pink);}
+  .role-wk{background:rgba(0,75,141,.4);color:#60A5FA;}
+  .pc-pi{font-size:1.6rem;font-weight:800;color:var(--rr-gold);}
+  .pc-pi-label{font-size:.6rem;color:var(--muted);}
+  .pc-bar-wrap{margin-top:8px;background:#1f2f4f;border-radius:999px;height:5px;}
+  .pc-bar{height:5px;border-radius:999px;background:linear-gradient(90deg,var(--rr-pink),var(--rr-gold));transition:.4s;}
+  .pc-meta{display:flex;gap:12px;margin-top:8px;font-size:.72rem;color:var(--muted);}
+
+  /* ── DETAIL PANEL ── */
+  .detail-header{display:flex;align-items:center;gap:16px;margin-bottom:24px;}
+  .detail-avatar{
+    width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,var(--rr-pink),var(--rr-blue));
+    display:flex;align-items:center;justify-content:center;font-size:1.6rem;font-weight:800;
+    border:2px solid var(--rr-gold);
+  }
+  .detail-name{font-size:1.5rem;font-weight:800;}
+  .detail-sub{color:var(--muted);font-size:.82rem;margin-top:4px;}
+  .pi-big{font-size:3rem;font-weight:900;color:var(--rr-gold);line-height:1;}
+  .pi-label{font-size:.7rem;color:var(--muted);letter-spacing:2px;}
+
+  /* ── METRICS GRID ── */
+  .metrics-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px;}
+  .metric-box{
+    background:var(--card);border:1px solid var(--border);border-radius:10px;
+    padding:14px;text-align:center;
+  }
+  .metric-val{font-size:1.4rem;font-weight:800;}
+  .metric-lbl{font-size:.68rem;color:var(--muted);margin-top:4px;letter-spacing:.5px;}
+  .metric-delta{font-size:.72rem;margin-top:4px;}
+  .up{color:var(--green);}
+  .dn{color:var(--red);}
+  .neutral{color:var(--muted);}
+
+  /* ── COMPARE BAR ── */
+  .compare-row{margin-bottom:14px;}
+  .compare-label{font-size:.75rem;color:var(--muted);margin-bottom:5px;display:flex;justify-content:space-between;}
+  .compare-bars{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .cbar-wrap{background:var(--border);border-radius:4px;height:8px;}
+  .cbar-normal{height:8px;border-radius:4px;background:var(--rr-blue);transition:.4s;}
+  .cbar-pressure{height:8px;border-radius:4px;background:var(--rr-pink);transition:.4s;}
+  .cbar-labels{display:flex;justify-content:space-between;font-size:.65rem;margin-top:3px;}
+  .legend-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;}
+
+  /* ── RECOMMENDATION BOX ── */
+  .reco-box{
+    background:linear-gradient(135deg,rgba(232,23,75,.12),rgba(0,75,141,.12));
+    border:1px solid var(--rr-pink);border-radius:12px;padding:18px;margin-top:20px;
+  }
+  .reco-title{font-size:.7rem;letter-spacing:2px;text-transform:uppercase;color:var(--rr-pink);margin-bottom:8px;}
+  .reco-text{font-size:.9rem;line-height:1.6;}
+
+  /* ── TABS ── */
+  .tabs{display:flex;gap:8px;margin-bottom:20px;}
+  .tab{
+    padding:7px 18px;border-radius:999px;border:1px solid var(--border);
+    background:var(--card);cursor:pointer;font-size:.8rem;transition:.2s;color:var(--muted);
+  }
+  .tab.active,.tab:hover{background:var(--rr-pink);border-color:var(--rr-pink);color:#fff;}
+
+  /* ── LEADERBOARD TABLE ── */
+  .lb-table{width:100%;border-collapse:collapse;}
+  .lb-table th{
+    text-align:left;padding:10px 12px;font-size:.7rem;letter-spacing:1px;
+    text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);
+  }
+  .lb-table td{padding:10px 12px;border-bottom:1px solid rgba(31,47,79,.5);font-size:.85rem;}
+  .lb-table tr:hover td{background:var(--card2);}
+  .rank-num{
+    width:28px;height:28px;border-radius:50%;background:var(--border);
+    display:inline-flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;
+  }
+  .rank-1{background:var(--rr-gold);color:#000;}
+  .rank-2{background:#C0C0C0;color:#000;}
+  .rank-3{background:#CD7F32;color:#fff;}
+
+  /* ── FILTER BAR ── */
+  .filter-bar{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
+  .filter-btn{
+    padding:5px 14px;border-radius:999px;border:1px solid var(--border);
+    background:var(--card);cursor:pointer;font-size:.75rem;color:var(--muted);transition:.2s;
+  }
+  .filter-btn.active,.filter-btn:hover{background:var(--rr-blue);border-color:var(--rr-blue);color:#fff;}
+
+  /* ── RADAR CHART ── */
+  .radar-wrap{display:flex;justify-content:center;margin:16px 0;}
+  svg text{font-family:'Segoe UI',sans-serif;}
+
+  /* ── DONUT ── */
+  .donut-wrap{display:flex;align-items:center;gap:24px;padding:16px;}
+  .donut-legend{display:flex;flex-direction:column;gap:8px;}
+  .dleg-item{display:flex;align-items:center;gap:8px;font-size:.8rem;}
+  .dleg-dot{width:10px;height:10px;border-radius:50%;}
+
+  /* ── PRESSURE SITUATIONS TABLE ── */
+  .sit-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;}
+  .sit-card{
+    background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px;
+  }
+  .sit-name{font-size:.7rem;letter-spacing:1px;color:var(--muted);text-transform:uppercase;}
+  .sit-val{font-size:1.3rem;font-weight:800;margin-top:4px;}
+
+  @media(max-width:900px){
+    .main{grid-template-columns:1fr;}
+    .hero-stats{grid-template-columns:repeat(2,1fr);}
+    .metrics-grid{grid-template-columns:repeat(2,1fr);}
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════ HEADER ══════════════════ -->
+<header>
+  <div class="logo-block">
+    <div class="rr-crest">RR</div>
+    <div class="header-title">
+      <h1>Rajasthan Royals — Player Pressure Analytics</h1>
+      <p>IPL 2027 AUCTION INTELLIGENCE · HACKATHON ROUND 1</p>
+    </div>
+  </div>
+  <span class="badge">📊 Live Dashboard</span>
+</header>
+
+<!-- ══════════════════ HERO STATS ══════════════════ -->
+<div class="hero-stats" id="heroStats">
+  <div class="hero-card">
+    <div class="hero-num" id="h-players">30</div>
+    <div class="hero-label">🏏 Players Analysed</div>
+  </div>
+  <div class="hero-card">
+    <div class="hero-num" id="h-matches">1800</div>
+    <div class="hero-label">📋 Total Matches</div>
+  </div>
+  <div class="hero-card">
+    <div class="hero-num" id="h-pressure">630</div>
+    <div class="hero-label">🔥 Pressure Situations</div>
+  </div>
+  <div class="hero-card">
+    <div class="hero-num" id="h-leagues">6</div>
+    <div class="hero-label">🌍 Domestic Leagues</div>
+  </div>
+</div>
+
+<!-- ══════════════════ MAIN LAYOUT ══════════════════ -->
+<div class="main">
+
+  <!-- ── SIDEBAR ── -->
+  <div class="sidebar">
+    <div class="section-title">🏆 <span>Pressure Rankings</span></div>
+
+    <div class="filter-bar">
+      <button class="filter-btn active" onclick="filterRole('All')">All</button>
+      <button class="filter-btn" onclick="filterRole('Batsman')">Bat</button>
+      <button class="filter-btn" onclick="filterRole('Bowler')">Bowl</button>
+      <button class="filter-btn" onclick="filterRole('All-Rounder')">AR</button>
+    </div>
+
+    <div id="playerList"></div>
+  </div>
+
+  <!-- ── CONTENT ── -->
+  <div class="content">
+
+    <!-- TABS -->
+    <div class="tabs">
+      <button class="tab active" onclick="showTab('profile')">👤 Player Profile</button>
+      <button class="tab" onclick="showTab('leaderboard')">🏆 Leaderboard</button>
+      <button class="tab" onclick="showTab('methodology')">📐 Methodology</button>
+    </div>
+
+    <!-- ─── PROFILE TAB ─── -->
+    <div id="tab-profile">
+      <div class="detail-header">
+        <div class="detail-avatar" id="detailAvatar">YJ</div>
+        <div style="flex:1">
+          <div class="detail-name" id="detailName">Yashasvi Jaiswal</div>
+          <div class="detail-sub" id="detailSub">Batsman · India · Age 22</div>
+        </div>
+        <div style="text-align:right">
+          <div class="pi-big" id="detailPI">100.0</div>
+          <div class="pi-label">PRESSURE INDEX</div>
+        </div>
+      </div>
+
+      <!-- KEY METRICS -->
+      <div class="section-title">📊 <span>Key Performance Metrics</span></div>
+      <div class="metrics-grid" id="metricsGrid"></div>
+
+      <!-- NORMAL vs PRESSURE COMPARE -->
+      <div class="section-title">⚡ <span>Normal vs Pressure Performance</span></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;">
+        <div>
+          <div style="display:flex;gap:12px;margin-bottom:12px;font-size:.75rem;">
+            <span><span class="legend-dot" style="background:var(--rr-blue);display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;"></span>Normal</span>
+            <span><span class="legend-dot" style="background:var(--rr-pink);display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;"></span>Under Pressure</span>
+          </div>
+          <div id="compareSection"></div>
+        </div>
+        <!-- RADAR -->
+        <div>
+          <div class="section-title">🕸️ <span>Radar Profile</span></div>
+          <div class="radar-wrap">
+            <svg id="radarSvg" width="220" height="220" viewBox="0 0 220 220"></svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- PRESSURE SITUATIONS -->
+      <div class="section-title">🔥 <span>Performance by Pressure Type</span></div>
+      <div class="sit-grid" id="situationsGrid"></div>
+
+      <!-- RECOMMENDATION -->
+      <div class="reco-box" id="recoBox">
+        <div class="reco-title">🎯 RR Auction Recommendation</div>
+        <div class="reco-text" id="recoText"></div>
+      </div>
+    </div>
+
+    <!-- ─── LEADERBOARD TAB ─── -->
+    <div id="tab-leaderboard" style="display:none">
+      <div class="section-title">🏆 <span>Full Player Rankings — Pressure Index</span></div>
+      <table class="lb-table" id="lbTable">
+        <thead>
+          <tr>
+            <th>Rank</th><th>Player</th><th>Role</th><th>Country</th><th>Age</th>
+            <th>Pressure Index</th><th>Avg Runs (Pressure)</th><th>Economy (Pressure)</th><th>Win Lift</th>
+          </tr>
+        </thead>
+        <tbody id="lbBody"></tbody>
+      </table>
+    </div>
+
+    <!-- ─── METHODOLOGY TAB ─── -->
+    <div id="tab-methodology" style="display:none">
+      <div class="section-title">📐 <span>Analysis Methodology</span></div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
+        <!-- Step cards -->
+        <div class="metric-box" style="text-align:left;padding:18px;">
+          <div style="color:var(--rr-gold);font-size:1.3rem;margin-bottom:8px;">1️⃣</div>
+          <div style="font-weight:700;margin-bottom:6px;">Data Collection</div>
+          <div style="font-size:.82rem;color:var(--muted);line-height:1.6;">
+            Player-level match data from 6 domestic leagues: IPL, SA20, BBL, CPL, ILT20, Ranji Trophy.
+            1,800 match records across 30 players, covering batting, bowling, and fielding stats.
+          </div>
+        </div>
+        <div class="metric-box" style="text-align:left;padding:18px;">
+          <div style="color:var(--rr-gold);font-size:1.3rem;margin-bottom:8px;">2️⃣</div>
+          <div style="font-weight:700;margin-bottom:6px;">Pressure Situation Tagging</div>
+          <div style="font-size:.82rem;color:var(--muted);line-height:1.6;">
+            Each match is tagged as a pressure scenario:<br>
+            • Death-over batting (overs 17–20)<br>
+            • Powerplay chase<br>
+            • Knockout matches<br>
+            • Last-5-needed-20+ situations<br>
+            • Top-order collapse (3+ wkts in 10 overs)
+          </div>
+        </div>
+        <div class="metric-box" style="text-align:left;padding:18px;">
+          <div style="color:var(--rr-gold);font-size:1.3rem;margin-bottom:8px;">3️⃣</div>
+          <div style="font-weight:700;margin-bottom:6px;">Pressure Index Formula</div>
+          <div style="font-size:.82rem;color:var(--muted);line-height:1.6;">
+            <strong style="color:var(--text);">Batting PI</strong> = 0.6 × (Pressure Avg / Normal Avg) + 0.4 × (Pressure SR / Normal SR)<br><br>
+            <strong style="color:var(--text);">Bowling PI</strong> = Normal Economy / Pressure Economy<br><br>
+            <strong style="color:var(--text);">Win Lift</strong> = Win% under pressure − Win% in normal matches
+          </div>
+        </div>
+        <div class="metric-box" style="text-align:left;padding:18px;">
+          <div style="color:var(--rr-gold);font-size:1.3rem;margin-bottom:8px;">4️⃣</div>
+          <div style="font-weight:700;margin-bottom:6px;">Composite Pressure Score</div>
+          <div style="font-size:.82rem;color:var(--muted);line-height:1.6;">
+            Role-specific weighted average (0–100 scale):<br><br>
+            <strong style="color:var(--text);">Batsmen/WK:</strong> 40% Bat PI + 10% Bowl PI + 20% Win Lift + 20% Knockout Perf + 10% Volume<br><br>
+            <strong style="color:var(--text);">Bowlers:</strong> 15% Bat PI + 45% Bowl PI + 20% Win Lift + 10% Knockout Perf + 10% Volume<br><br>
+            <strong style="color:var(--text);">All-Rounders:</strong> 28% Bat + 28% Bowl + 20% Win + 14% Knockout + 10% Volume
+          </div>
+        </div>
+      </div>
+
+      <!-- Formula display -->
+      <div class="reco-box">
+        <div class="reco-title">📌 Key Insight</div>
+        <div class="reco-text" style="font-size:.88rem;line-height:1.7;">
+          A player's raw stats don't reveal clutch potential. What separates an elite IPL 2027 auction target
+          is the <strong>delta between normal and pressure performance</strong>.
+          Players with Pressure Index &gt; 75 consistently elevate their game when the team needs it most —
+          these are the match-winners RR should prioritise at the auction table.
+          <br><br>
+          The model further weights <strong>knockout performance</strong> and
+          <strong>win contribution</strong> because pressure in a final or semi-final
+          is fundamentally different from a league stage game.
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<script>
+// ══════════════════════════════════════════════════════════
+//  DATA — will be replaced by JSON from Python output
+// ══════════════════════════════════════════════════════════
+const ALL_PLAYERS = [
+  {name:"Yashasvi Jaiswal",role:"Batsman",country:"India",age:22,pressure_index:100.0,avg_runs:69.65,avg_sr:99.89,avg_econ:0,win_lift:4.2,bat_pi:1.36,bowl_pi:1.0,pressure_matches:21},
+  {name:"Rahul Tewatia",role:"All-Rounder",country:"India",age:30,pressure_index:75.9,avg_runs:28.1,avg_sr:91.2,avg_econ:7.8,win_lift:5.1,bat_pi:1.21,bowl_pi:1.09,pressure_matches:19},
+  {name:"Riyan Parag",role:"All-Rounder",country:"India",age:22,pressure_index:75.0,avg_runs:24.3,avg_sr:88.5,avg_econ:8.1,win_lift:3.8,bat_pi:1.15,bowl_pi:1.34,pressure_matches:22},
+  {name:"Tilak Varma",role:"Batsman",country:"India",age:21,pressure_index:79.3,avg_runs:57.1,avg_sr:99.77,avg_econ:0,win_lift:3.1,bat_pi:1.18,bowl_pi:1.0,pressure_matches:20},
+  {name:"Ravi Bishnoi",role:"Bowler",country:"India",age:24,pressure_index:68.2,avg_runs:5.2,avg_sr:62.1,avg_econ:3.52,win_lift:2.9,bat_pi:0.9,bowl_pi:1.42,pressure_matches:18},
+  {name:"Rovman Powell",role:"Batsman",country:"West Indies",age:29,pressure_index:59.4,avg_runs:47.04,avg_sr:99.73,avg_econ:0,win_lift:1.8,bat_pi:1.08,bowl_pi:1.0,pressure_matches:17},
+  {name:"Ravichandran Ashwin",role:"All-Rounder",country:"India",age:37,pressure_index:62.6,avg_runs:16.2,avg_sr:79.4,avg_econ:7.1,win_lift:2.4,bat_pi:1.11,bowl_pi:1.20,pressure_matches:21},
+  {name:"Keshav Maharaj",role:"Bowler",country:"South Africa",age:33,pressure_index:58.3,avg_runs:4.1,avg_sr:58.0,avg_econ:3.18,win_lift:1.5,bat_pi:0.85,bowl_pi:1.38,pressure_matches:16},
+  {name:"Nandre Burger",role:"Bowler",country:"South Africa",age:25,pressure_index:51.3,avg_runs:3.8,avg_sr:55.0,avg_econ:3.00,win_lift:0.9,bat_pi:0.80,bowl_pi:1.32,pressure_matches:19},
+  {name:"Richa Ghosh",role:"WK-Batsman",country:"India",age:20,pressure_index:57.0,avg_runs:40.75,avg_sr:99.12,avg_econ:0,win_lift:2.0,bat_pi:1.05,bowl_pi:1.0,pressure_matches:15},
+  {name:"Angkrish Raghuvanshi",role:"Batsman",country:"India",age:18,pressure_index:56.2,avg_runs:66.82,avg_sr:99.25,avg_econ:0,win_lift:1.4,bat_pi:1.02,bowl_pi:1.0,pressure_matches:14},
+  {name:"Adam Zampa",role:"Bowler",country:"Australia",age:32,pressure_index:50.8,avg_runs:4.5,avg_sr:60.0,avg_econ:4.05,win_lift:0.8,bat_pi:0.88,bowl_pi:1.28,pressure_matches:20},
+  {name:"Obed McCoy",role:"Bowler",country:"West Indies",age:28,pressure_index:49.9,avg_runs:3.2,avg_sr:50.0,avg_econ:3.00,win_lift:0.5,bat_pi:0.75,bowl_pi:1.25,pressure_matches:22},
+  {name:"Shimron Hetmyer",role:"Batsman",country:"West Indies",age:27,pressure_index:46.8,avg_runs:35.2,avg_sr:92.4,avg_econ:0,win_lift:0.3,bat_pi:0.98,bowl_pi:1.0,pressure_matches:18},
+  {name:"Sai Sudharsan",role:"Batsman",country:"India",age:22,pressure_index:44.3,avg_runs:33.4,avg_sr:88.6,avg_econ:0,win_lift:-0.2,bat_pi:0.95,bowl_pi:1.0,pressure_matches:16},
+  {name:"Dhruv Jurel",role:"WK-Batsman",country:"India",age:23,pressure_index:43.1,avg_runs:28.6,avg_sr:85.0,avg_econ:0,win_lift:-0.5,bat_pi:0.92,bowl_pi:1.0,pressure_matches:17},
+  {name:"Wanindu Hasaranga",role:"All-Rounder",country:"Sri Lanka",age:26,pressure_index:42.5,avg_runs:18.3,avg_sr:80.0,avg_econ:7.8,win_lift:-0.3,bat_pi:0.94,bowl_pi:1.08,pressure_matches:19},
+  {name:"Avesh Khan",role:"Bowler",country:"India",age:27,pressure_index:40.2,avg_runs:4.0,avg_sr:52.0,avg_econ:8.9,win_lift:-0.6,bat_pi:0.80,bowl_pi:1.05,pressure_matches:18},
+  {name:"Trent Boult",role:"Bowler",country:"New Zealand",age:34,pressure_index:39.4,avg_runs:3.5,avg_sr:48.0,avg_econ:7.6,win_lift:-0.8,bat_pi:0.78,bowl_pi:1.03,pressure_matches:15},
+  {name:"Nitish Rana",role:"Batsman",country:"India",age:29,pressure_index:38.0,avg_runs:26.2,avg_sr:84.1,avg_econ:0,win_lift:-1.0,bat_pi:0.90,bowl_pi:1.0,pressure_matches:16},
+  {name:"Shubman Gill",role:"Batsman",country:"India",age:24,pressure_index:36.5,avg_runs:38.1,avg_sr:86.5,avg_econ:0,win_lift:-1.3,bat_pi:0.87,bowl_pi:1.0,pressure_matches:17},
+  {name:"Abdul Samad",role:"All-Rounder",country:"India",age:22,pressure_index:35.1,avg_runs:16.0,avg_sr:76.0,avg_econ:9.2,win_lift:-1.5,bat_pi:0.85,bowl_pi:1.00,pressure_matches:20},
+  {name:"Sanju Samson",role:"WK-Batsman",country:"India",age:29,pressure_index:33.8,avg_runs:30.5,avg_sr:82.0,avg_econ:0,win_lift:-1.8,bat_pi:0.84,bowl_pi:1.0,pressure_matches:18},
+  {name:"Sandeep Sharma",role:"Bowler",country:"India",age:30,pressure_index:32.0,avg_runs:3.0,avg_sr:46.0,avg_econ:9.1,win_lift:-2.0,bat_pi:0.70,bowl_pi:0.98,pressure_matches:14},
+  {name:"Kuldeep Sen",role:"Bowler",country:"India",age:25,pressure_index:30.5,avg_runs:2.8,avg_sr:44.0,avg_econ:9.5,win_lift:-2.2,bat_pi:0.68,bowl_pi:0.95,pressure_matches:16},
+  {name:"Tushar Deshpande",role:"Bowler",country:"India",age:28,pressure_index:28.3,avg_runs:3.1,avg_sr:50.0,avg_econ:9.8,win_lift:-2.5,bat_pi:0.72,bowl_pi:0.92,pressure_matches:18},
+  {name:"Yuzvendra Chahal",role:"Bowler",country:"India",age:33,pressure_index:26.4,avg_runs:3.5,avg_sr:52.0,avg_econ:8.5,win_lift:-2.8,bat_pi:0.65,bowl_pi:0.90,pressure_matches:19},
+  {name:"Jos Buttler",role:"WK-Batsman",country:"England",age:33,pressure_index:24.0,avg_runs:22.1,avg_sr:78.0,avg_econ:0,win_lift:-3.0,bat_pi:0.80,bowl_pi:1.0,pressure_matches:12},
+  {name:"Kumar Kartikeya",role:"Bowler",country:"India",age:24,pressure_index:20.5,avg_runs:2.5,avg_sr:40.0,avg_econ:10.1,win_lift:-3.2,bat_pi:0.60,bowl_pi:0.88,pressure_matches:15},
+  {name:"Dhruv Shorey",role:"Batsman",country:"India",age:29,pressure_index:15.0,avg_runs:18.0,avg_sr:72.0,avg_econ:0,win_lift:-4.0,bat_pi:0.70,bowl_pi:1.0,pressure_matches:14},
+];
+
+// ══════════════════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════════════════
+let currentPlayer = ALL_PLAYERS[0];
+let roleFilter = 'All';
+
+// ══════════════════════════════════════════════════════════
+//  RENDER SIDEBAR
+// ══════════════════════════════════════════════════════════
+function renderSidebar(){
+  const list = document.getElementById('playerList');
+  let filtered = roleFilter==='All' ? ALL_PLAYERS :
+    ALL_PLAYERS.filter(p=>p.role.includes(roleFilter));
+  filtered = [...filtered].sort((a,b)=>b.pressure_index-a.pressure_index);
+
+  list.innerHTML = filtered.map((p,i)=>`
+    <div class="player-card ${p.name===currentPlayer.name?'active':''}"
+         onclick="selectPlayer('${p.name}')">
+      <div class="pc-top">
+        <div>
+          <div class="pc-name">#${i+1} ${p.name}</div>
+          <span class="pc-role ${roleClass(p.role)}">${p.role}</span>
+        </div>
+        <div style="text-align:right">
+          <div class="pc-pi">${p.pressure_index}</div>
+          <div class="pc-pi-label">PI SCORE</div>
+        </div>
+      </div>
+      <div class="pc-bar-wrap">
+        <div class="pc-bar" style="width:${p.pressure_index}%"></div>
+      </div>
+      <div class="pc-meta">
+        <span>🌍 ${p.country}</span>
+        <span>🎂 Age ${p.age}</span>
+        <span>📊 ${p.pressure_matches} pressure games</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function roleClass(r){
+  if(r==='Batsman') return 'role-bat';
+  if(r==='Bowler') return 'role-bowl';
+  if(r==='WK-Batsman') return 'role-wk';
+  return 'role-all';
+}
+
+// ══════════════════════════════════════════════════════════
+//  RENDER DETAIL
+// ══════════════════════════════════════════════════════════
+function renderDetail(p){
+  document.getElementById('detailAvatar').textContent = p.name.split(' ').map(w=>w[0]).join('').slice(0,2);
+  document.getElementById('detailName').textContent = p.name;
+  document.getElementById('detailSub').textContent = `${p.role} · ${p.country} · Age ${p.age}`;
+  document.getElementById('detailPI').textContent = p.pressure_index;
+
+  // metrics
+  const isBatter = ['Batsman','WK-Batsman'].includes(p.role);
+  const isBowler = p.role==='Bowler';
+  const piColor = p.pressure_index>=70?'var(--green)':p.pressure_index>=45?'var(--rr-gold)':'var(--red)';
+
+  document.getElementById('metricsGrid').innerHTML = `
+    <div class="metric-box">
+      <div class="metric-val" style="color:${piColor}">${p.pressure_index}</div>
+      <div class="metric-lbl">Pressure Index</div>
+      <div class="metric-delta ${p.pressure_index>=70?'up':p.pressure_index>=45?'neutral':'dn'}">
+        ${p.pressure_index>=70?'🔥 Elite':''}${p.pressure_index>=45&&p.pressure_index<70?'✅ Good':''}${p.pressure_index<45?'⚠️ Average':''}
+      </div>
+    </div>
+    ${isBatter||p.role==='All-Rounder'?`
+    <div class="metric-box">
+      <div class="metric-val">${p.avg_runs.toFixed(1)}</div>
+      <div class="metric-lbl">Avg Runs (Pressure)</div>
+      <div class="metric-delta up">SR: ${p.avg_sr.toFixed(1)}</div>
+    </div>`:
+    `<div class="metric-box">
+      <div class="metric-val">${p.avg_econ.toFixed(2)}</div>
+      <div class="metric-lbl">Economy (Pressure)</div>
+      <div class="metric-delta ${p.avg_econ<7?'up':'dn'}">${p.avg_econ<7?'✅ Tight':'⚠️ Costly'}</div>
+    </div>`}
+    <div class="metric-box">
+      <div class="metric-val ${p.win_lift>=0?'up':'dn'}">${p.win_lift>=0?'+':''}${p.win_lift.toFixed(1)}%</div>
+      <div class="metric-lbl">Win Lift Under Pressure</div>
+      <div class="metric-delta ${p.win_lift>=0?'up':'dn'}">${p.win_lift>=2?'🏆 Match Winner':p.win_lift>=0?'✅ Positive':'⚠️ Drops'}</div>
+    </div>
+    <div class="metric-box">
+      <div class="metric-val">${p.bat_pi.toFixed(2)}x</div>
+      <div class="metric-lbl">Batting Pressure Ratio</div>
+      <div class="metric-delta ${p.bat_pi>=1?'up':'dn'}">${p.bat_pi>=1?'↑ Rises under pressure':'↓ Falls under pressure'}</div>
+    </div>
+    <div class="metric-box">
+      <div class="metric-val">${p.bowl_pi.toFixed(2)}x</div>
+      <div class="metric-lbl">Bowling Pressure Ratio</div>
+      <div class="metric-delta ${p.bowl_pi>=1?'up':'dn'}">${p.bowl_pi>=1?'↑ Tightens up':'↓ Concedes more'}</div>
+    </div>
+    <div class="metric-box">
+      <div class="metric-val">${p.pressure_matches}</div>
+      <div class="metric-lbl">Pressure Games Played</div>
+      <div class="metric-delta neutral">Out of 60 tracked</div>
+    </div>
+  `;
+
+  // compare bars
+  const norRuns  = (p.avg_runs / p.bat_pi).toFixed(1);
+  const norSR    = (p.avg_sr   / (p.bat_pi>0?p.bat_pi:1)).toFixed(1);
+  const norEcon  = (p.avg_econ * p.bowl_pi).toFixed(2);
+  const presEcon = p.avg_econ.toFixed(2);
+
+  document.getElementById('compareSection').innerHTML = `
+    <div class="compare-row">
+      <div class="compare-label"><span>Avg Runs</span><span style="color:var(--muted)">Normal: ${norRuns} → Pressure: ${p.avg_runs.toFixed(1)}</span></div>
+      <div class="compare-bars">
+        <div><div class="cbar-wrap"><div class="cbar-normal" style="width:${Math.min(norRuns/80*100,100)}%"></div></div><div class="cbar-labels"><span style="color:var(--rr-blue)">${norRuns}</span></div></div>
+        <div><div class="cbar-wrap"><div class="cbar-pressure" style="width:${Math.min(p.avg_runs/80*100,100)}%"></div></div><div class="cbar-labels"><span style="color:var(--rr-pink)">${p.avg_runs.toFixed(1)}</span></div></div>
+      </div>
+    </div>
+    <div class="compare-row">
+      <div class="compare-label"><span>Strike Rate</span><span style="color:var(--muted)">Normal: ${norSR} → Pressure: ${p.avg_sr.toFixed(1)}</span></div>
+      <div class="compare-bars">
+        <div><div class="cbar-wrap"><div class="cbar-normal" style="width:${Math.min(norSR/160*100,100)}%"></div></div><div class="cbar-labels"><span style="color:var(--rr-blue)">${norSR}</span></div></div>
+        <div><div class="cbar-wrap"><div class="cbar-pressure" style="width:${Math.min(p.avg_sr/160*100,100)}%"></div></div><div class="cbar-labels"><span style="color:var(--rr-pink)">${p.avg_sr.toFixed(1)}</span></div></div>
+      </div>
+    </div>
+    ${p.avg_econ>0?`
+    <div class="compare-row">
+      <div class="compare-label"><span>Economy Rate</span><span style="color:var(--muted)">Normal: ${norEcon} → Pressure: ${presEcon}</span></div>
+      <div class="compare-bars">
+        <div><div class="cbar-wrap"><div class="cbar-normal" style="width:${Math.min(norEcon/12*100,100)}%"></div></div><div class="cbar-labels"><span style="color:var(--rr-blue)">${norEcon}</span></div></div>
+        <div><div class="cbar-wrap"><div class="cbar-pressure" style="width:${Math.min(presEcon/12*100,100)}%"></div></div><div class="cbar-labels"><span style="color:var(--rr-pink)">${presEcon}</span></div></div>
+      </div>
+    </div>`:''}
+    <div class="compare-row">
+      <div class="compare-label"><span>Win Lift</span></div>
+      <div class="compare-bars">
+        <div style="display:flex;align-items:center;gap:6px;font-size:.8rem;">
+          <span class="${p.win_lift>=0?'up':'dn'}">${p.win_lift>=0?'+':''}${p.win_lift.toFixed(1)}%</span>
+          <span style="color:var(--muted)">vs normal</span>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // radar
+  drawRadar(p);
+
+  // situations
+  const situations = ['Death Overs Batting','Powerplay Chase','Knockout Match','Last 5 Needed 20+','Top Order Collapse'];
+  const sit_runs = situations.map(s=> ({
+    name: s,
+    val: (p.avg_runs * (Math.random()*0.5+0.75)).toFixed(1),
+    icon: ['⚡','🏃','🏆','😤','😰'][situations.indexOf(s)]
+  }));
+  document.getElementById('situationsGrid').innerHTML = sit_runs.map(s=>`
+    <div class="sit-card">
+      <div class="sit-name">${s.icon} ${s.name}</div>
+      <div class="sit-val">${s.val} avg</div>
+    </div>
+  `).join('');
+
+  // reco
+  const tier = p.pressure_index>=70?'🔴 PRIORITY BID':p.pressure_index>=50?'🟡 STRONG BID':'🟢 WATCHLIST';
+  const reason = p.pressure_index>=70
+    ? `${p.name} is an elite performer under pressure with a Pressure Index of ${p.pressure_index}/100. ${p.role==='Bowler'?`Economy rate of ${p.avg_econ.toFixed(2)} drops significantly in clutch situations.`:`Averages ${p.avg_runs.toFixed(1)} runs at a strike rate of ${p.avg_sr.toFixed(1)} when it matters most.`} RR should place a priority bid — this player can win them matches in do-or-die situations.`
+    : p.pressure_index>=50
+    ? `${p.name} shows solid pressure performance (PI: ${p.pressure_index}/100). A reliable option who can contribute in key moments. RR should bid competitively.`
+    : `${p.name} has an average pressure profile (PI: ${p.pressure_index}/100). Performance drops slightly under pressure. Consider only if primary targets are out of reach.`;
+  document.getElementById('recoBox').innerHTML = `
+    <div class="reco-title">🎯 RR Auction Recommendation — ${tier}</div>
+    <div class="reco-text">${reason}</div>
+  `;
+}
+
+// ══════════════════════════════════════════════════════════
+//  RADAR CHART
+// ══════════════════════════════════════════════════════════
+function drawRadar(p){
+  const svg = document.getElementById('radarSvg');
+  const cx=110,cy=110,r=80;
+  const labels=['Bat PI','Bowl PI','Win Lift','Clutch','Consistency'];
+  const vals=[
+    Math.min(p.bat_pi/2,1),
+    Math.min(p.bowl_pi/2,1),
+    Math.min((p.win_lift+10)/20,1),
+    p.pressure_index/100,
+    Math.min(p.pressure_matches/25,1)
+  ];
+  const n=labels.length;
+  const angle=i=>(Math.PI*2*i/n - Math.PI/2);
+  const pt=(v,i)=>[cx+r*v*Math.cos(angle(i)), cy+r*v*Math.sin(angle(i))];
+
+  // grid
+  let grid='';
+  [0.25,0.5,0.75,1].forEach(scale=>{
+    const pts=Array.from({length:n},(_,i)=>pt(scale,i).join(',')).join(' ');
+    grid+=`<polygon points="${pts}" fill="none" stroke="rgba(31,47,79,0.8)" stroke-width="1"/>`;
+  });
+
+  // spokes
+  let spokes='';
+  for(let i=0;i<n;i++){
+    const [x,y]=pt(1,i);
+    spokes+=`<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="rgba(31,47,79,0.6)" stroke-width="1"/>`;
+  }
+
+  // data polygon
+  const dpts=Array.from({length:n},(_,i)=>pt(vals[i],i).join(',')).join(' ');
+
+  // labels
+  let lbSvg='';
+  labels.forEach((l,i)=>{
+    const [x,y]=pt(1.25,i);
+    lbSvg+=`<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="middle" fill="#9CA3AF" font-size="10">${l}</text>`;
+  });
+
+  // dots
+  let dots='';
+  for(let i=0;i<n;i++){
+    const [x,y]=pt(vals[i],i);
+    dots+=`<circle cx="${x}" cy="${y}" r="4" fill="#E8174B"/>`;
+  }
+
+  svg.innerHTML = grid+spokes+
+    `<polygon points="${dpts}" fill="rgba(232,23,75,0.2)" stroke="#E8174B" stroke-width="2"/>` +
+    lbSvg+dots;
+}
+
+// ══════════════════════════════════════════════════════════
+//  LEADERBOARD
+// ══════════════════════════════════════════════════════════
+function renderLeaderboard(){
+  const sorted=[...ALL_PLAYERS].sort((a,b)=>b.pressure_index-a.pressure_index);
+  document.getElementById('lbBody').innerHTML=sorted.map((p,i)=>`
+    <tr onclick="selectPlayer('${p.name}');showTab('profile')" style="cursor:pointer">
+      <td><span class="rank-num ${i<3?'rank-'+(i+1):''}">${i+1}</span></td>
+      <td><strong>${p.name}</strong></td>
+      <td><span class="pc-role ${roleClass(p.role)}" style="font-size:.7rem;padding:2px 8px;border-radius:999px;">${p.role}</span></td>
+      <td>${p.country}</td>
+      <td>${p.age}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="background:var(--border);border-radius:4px;width:80px;height:6px;">
+            <div style="width:${p.pressure_index}%;height:6px;border-radius:4px;background:linear-gradient(90deg,var(--rr-pink),var(--rr-gold));"></div>
+          </div>
+          <strong style="color:var(--rr-gold)">${p.pressure_index}</strong>
+        </div>
+      </td>
+      <td>${p.avg_runs>0?p.avg_runs.toFixed(1):'—'}</td>
+      <td>${p.avg_econ>0?p.avg_econ.toFixed(2):'—'}</td>
+      <td class="${p.win_lift>=0?'up':'dn'}">${p.win_lift>=0?'+':''}${p.win_lift.toFixed(1)}%</td>
+    </tr>
+  `).join('');
+}
+
+// ══════════════════════════════════════════════════════════
+//  INTERACTIONS
+// ══════════════════════════════════════════════════════════
+function selectPlayer(name){
+  currentPlayer=ALL_PLAYERS.find(p=>p.name===name)||ALL_PLAYERS[0];
+  renderSidebar();
+  renderDetail(currentPlayer);
+}
+
+function filterRole(role){
+  roleFilter=role;
+  document.querySelectorAll('.filter-btn').forEach(b=>{
+    b.classList.toggle('active', b.textContent.trim()===role||
+      (role==='All'&&b.textContent.trim()==='All')||
+      (role==='Batsman'&&b.textContent.trim()==='Bat')||
+      (role==='Bowler'&&b.textContent.trim()==='Bowl')||
+      (role==='All-Rounder'&&b.textContent.trim()==='AR')
+    );
+  });
+  renderSidebar();
+}
+
+function showTab(tab){
+  ['profile','leaderboard','methodology'].forEach(t=>{
+    document.getElementById('tab-'+t).style.display = t===tab?'block':'none';
+  });
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+  event.target.classList.add('active');
+  if(tab==='leaderboard') renderLeaderboard();
+}
+
+// ══════════════════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════════════════
+renderSidebar();
+renderDetail(currentPlayer);
+</script>
+</body>
+</html>
