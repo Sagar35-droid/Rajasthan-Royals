@@ -1,0 +1,4 @@
+# Ignore generated data files (optional - remove if you want to include them)
+__pycache__/
+*.pyc
+.env
